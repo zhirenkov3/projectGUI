@@ -1,0 +1,275 @@
+import javax.swing.*; // Импорт классов для создания графического интерфейса с использованием Swing
+import java.awt.*; // Импорт классов для работы с графическим интерфейсом в Java
+import java.awt.event.*; // Импорт классов для работы с событиями в Java
+import java.io.*; // Импорт классов для работы с потоками ввода-вывода
+import java.util.*; // Импорт классов для работы с коллекциями и другими структурами данных
+
+// Объявление публичного класса BattleGame, который расширяет класс JFrame и реализует интерфейс ActionListener
+public class BattleGame extends JFrame implements ActionListener {
+    // Объявление компонентов графического интерфейса: меток, кнопки, текстового поля
+    private JLabel playerLabel, enemyLabel, questionLabel, timerLabel, playerHealthLabel, enemyHealthLabel;
+    private JButton answerButton;
+    private JTextField answerField;
+    // Объявление переменных для времени на ответ и здоровья игрока и противника
+    private int timeLeft;
+    private int playerHealth, enemyHealth;
+    // Объявление таймера для отсчета времени
+    private javax.swing.Timer timer;
+    // Массивы строк для имен персонажей, противников и уровней сложности
+    private String[] characters = {"Алеша Попович", "Добрыня Никитич"};
+    private String[] enemies = {"Баба Яга", "Кощей Бессмертный"};
+    private String[] difficultyLevels = {"Легкий", "Сложный"};
+    // Список строк для хранения вопросов и ответов
+    private java.util.List<String> questions;
+    private String currentQuestion;
+    private int correctAnswer;
+    // Переменные для времени на ответ в зависимости от уровня сложности
+    private int easyTime = 10;  // Время на ответ для легкого уровня
+    private int hardTime = 20;  // Время на ответ для сложного уровня
+    private int currentDifficulty;
+
+    // Конструктор класса BattleGame
+    public BattleGame() {
+        // Настройка основного окна
+        setTitle("Battle Game"); // Установка заголовка окна
+        setSize(800, 400); // Установка размеров окна
+        setDefaultCloseOperation(EXIT_ON_CLOSE); // Установка действия при закрытии окна
+        setLocationRelativeTo(null); // Установка положения окна по центру экрана
+        setLayout(null); // Установка менеджера компоновки
+
+        // Установка шрифта для компонентов графического интерфейса
+        Font font = new Font("Arial", Font.PLAIN, 18);
+
+        // Инициализация и настройка компонентов графического интерфейса
+        playerLabel = new JLabel(); // Инициализация метки для игрока
+        playerLabel.setBounds(20, 20, 300, 30); // Установка положения и размеров метки
+        playerLabel.setFont(font); // Установка шрифта для метки
+        add(playerLabel); // Добавление метки на окно
+
+        enemyLabel = new JLabel(); // Инициализация метки для противника
+        enemyLabel.setBounds(400, 20, 300, 30); // Установка положения и размеров метки
+        enemyLabel.setFont(font); // Установка шрифта для метки
+        add(enemyLabel); // Добавление метки на окно
+
+        playerHealthLabel = new JLabel(); // Инициализация метки для здоровья игрока
+        playerHealthLabel.setBounds(20, 50, 300, 30); // Установка положения и размеров метки
+        playerHealthLabel.setFont(font); // Установка шрифта для метки
+        add(playerHealthLabel); // Добавление метки на окно
+
+        enemyHealthLabel = new JLabel(); // Инициализация метки для здоровья противника
+        enemyHealthLabel.setBounds(400, 50, 300, 30); // Установка положения и размеров метки
+        enemyHealthLabel.setFont(font); // Установка шрифта для метки
+        add(enemyHealthLabel); // Добавление метки на окно
+
+        questionLabel = new JLabel(); // Инициализация метки для вопроса
+        questionLabel.setBounds(20, 100, 300, 30); // Установка положения и размеров метки
+        questionLabel.setFont(font); // Установка шрифта для метки
+        add(questionLabel); // Добавление метки на окно
+
+        answerField = new JTextField(); // Инициализация текстового поля для ввода ответа
+        answerField.setBounds(20, 150, 200, 30); // Установка положения и размеров текстового поля
+        add(answerField); // Добавление текстового поля на окно
+
+        answerButton = new JButton("Answer"); // Инициализация кнопки "Answer"
+        answerButton.setBounds(230, 150, 100, 30); // Установка положения и размеров кнопки
+        answerButton.addActionListener(this); // Установка слушателя событий для кнопки
+        add(answerButton); // Добавление кнопки на окно
+
+        timerLabel = new JLabel(); // Инициализация метки для таймера
+        timerLabel.setBounds(400, 150, 200, 30); // Установка положения и размеров метки
+        timerLabel.setFont(font); // Установка шрифта для метки
+        add(timerLabel); // Добавление метки на окно
+
+        // Выбор персонажей
+        selectCharacters();
+
+        // Отображение окна
+        setVisible(true);
+    }
+
+    // Метод выбора персонажей
+    private void selectCharacters() {
+        // Диалоговое окно для выбора игрока и противника
+	int hero = JOptionPane.showOptionDialog(this, "Выбери богатыря", "Character Selection",
+	JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, characters, characters[0]);
+	int enemy = JOptionPane.showOptionDialog(this, "Выбери соперника", "Enemy Selection",
+        JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, enemies, enemies[0]);
+
+    // Установка выбранных персонажей в метки
+    playerLabel.setText("Богатырь: " + characters[hero]);
+    enemyLabel.setText("Супостат: " + enemies[enemy]);
+
+    // Инициализация здоровья игрока и противника
+    playerHealth = 100;
+    enemyHealth = 100;
+    // Обновление меток здоровья
+    updateHealthLabels();
+
+    // Выбор уровня сложности
+    selectDifficulty();
+}
+
+// Метод выбора уровня сложности
+private void selectDifficulty() {
+    // Диалоговое окно для выбора уровня сложности
+    currentDifficulty = JOptionPane.showOptionDialog(this, "Выбери уровень сложности", "Выбор уровня сложности",
+            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, difficultyLevels, difficultyLevels[0]);
+
+    // Установка имени файла и времени на ответ в зависимости от выбранного уровня сложности
+    String filename;
+    switch (currentDifficulty) {
+        case 0:
+            filename = "easy.txt";
+            timeLeft = easyTime;
+            break;
+        case 1:
+            filename = "hard.txt";
+            timeLeft = hardTime;
+            break;
+        default:
+            filename = "easy.txt";
+            timeLeft = easyTime;
+    }
+
+    // Загрузка вопросов из файла
+    loadQuestions(filename);
+    // Задание вопроса
+    askQuestion();
+}
+
+// Метод загрузки вопросов из файла
+private void loadQuestions(String filename) {
+    // Загрузка вопросов из указанного файла в список
+    questions = new ArrayList<>();
+    try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+            questions.add(line);
+        }
+    } catch (IOException e) {
+        // Вывод сообщения об ошибке при загрузке файла
+        JOptionPane.showMessageDialog(this, "Ошибка загрузки файла: " + filename);
+        e.printStackTrace();
+    }
+}
+
+// Метод обновления меток здоровья игрока и противника
+private void updateHealthLabels() {
+    // Обновление меток здоровья игрока и противника
+    playerHealthLabel.setText("Богатырское здоровье: " + playerHealth);
+    enemyHealthLabel.setText("Супостатское здоровье: " + enemyHealth);
+}
+
+// Метод задания вопроса
+private void askQuestion() {
+    // Проверка, загружены ли вопросы
+    if (questions.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Вопросы не загружены.");
+        return;
+    }
+
+    // Выбор случайного вопроса из списка
+    String[] questionAndAnswer = questions.get((int) (Math.random() * questions.size())).split(" ");
+    currentQuestion = questionAndAnswer[0];
+    correctAnswer = Integer.parseInt(questionAndAnswer[1]);
+
+    // Отображение текущего вопроса и времени на ответ
+    questionLabel.setText("Пример: " + currentQuestion);
+    timerLabel.setText(String.format("Времени осталось: %d", timeLeft));
+
+    // Остановка предыдущего таймера, если он был запущен
+    if (timer != null) {
+        timer.stop();
+    }
+
+    // Сброс времени на ответ в зависимости от уровня сложности
+    timeLeft = (currentDifficulty == 0) ? easyTime : hardTime;
+
+    // Создание и запуск таймера для отсчета времени на ответ
+    timer = new javax.swing.Timer(1000, new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+            timeLeft--;
+            timerLabel.setText(String.format("Времени осталось: %d", timeLeft));
+            if (timeLeft <= 0) {
+                timer.stop();
+                decrementPlayerHealth();
+                askQuestion();
+            }
+        }
+    });
+    timer.start();
+
+    // Очистка текстового поля для ввода ответа и передача ему фокуса
+    answerField.setText("");
+    answerField.requestFocus();
+}
+
+// Метод уменьшения здоровья игрокапри истечении времени на ответ
+private void decrementPlayerHealth() {
+// Уменьшение здоровья игрока на 10 единиц
+playerHealth -= 10;
+if (playerHealth <= 0) {
+// Если здоровье игрока меньше или равно нулю, игра заканчивается проигрышем
+playerHealth = 0;
+updateHealthLabels();
+timer.stop();
+// Диалоговое окно с возможностью начать игру заново или выйти
+int choice = JOptionPane.showOptionDialog(this, "Ты проиграл! Подучись и в следующий раз повезет.",
+"Проигрыш", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
+new String[]{"Заново", "Выход"}, "Заново");
+if (choice == 1) {
+System.exit(0); // Выход из игры
+} else {
+selectCharacters(); // Перезапуск игры
+}
+} else {
+// Обновление меток здоровья
+updateHealthLabels();
+}
+}
+// Метод обработки событий при нажатии кнопки "Answer"
+public void actionPerformed(ActionEvent e) {
+    // Обработка исключения при попытке преобразования введенного ответа в число
+    int answer;
+    try {
+        answer = Integer.parseInt(answerField.getText());
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, "Богатырь, нужно ввести число."); // Вывод сообщения об ошибке
+        return;
+    }
+
+    // Проверка правильности ответа
+    if (answer == correctAnswer) {
+        timer.stop();
+        enemyHealth -= 10;
+        if (enemyHealth <= 0) {
+            // Если здоровье противника меньше или равно нулю, игра заканчивается победой
+            enemyHealth = 0;
+            updateHealthLabels();
+            timer.stop();
+            // Диалоговое окно с возможностью начать игру заново или выйти
+            int choice = JOptionPane.showOptionDialog(this, "Ты выиграл! Теперь ты настоящий богатырь!",
+                    "Победа", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
+                    new String[]{"Заново", "Выход"}, "Заново");
+            if (choice == 1) {
+                System.exit(0); // Выход из игры
+            } else {
+                selectCharacters(); // Перезапуск игры
+            }
+        } else {
+            // Обновление меток здоровья
+            updateHealthLabels();
+            askQuestion(); // Задание нового вопроса
+        }
+    } else {
+        // Если ответ неверный, уменьшается здоровье игрока
+        decrementPlayerHealth();
+        askQuestion(); // Задание нового вопроса
+    }
+}
+
+// Метод main для запуска игры
+public static void main(String[] args) {
+    new BattleGame(); // Создание объекта класса BattleGame
+}
+}
